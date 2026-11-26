@@ -20,7 +20,8 @@ Key methodological controls built into the pipeline:
 
 ```text
 Base_code_Thesis/
-├── configs/                  # Experiment YAML configs (default + smoke test)
+├── configs/                  # Experiment YAML configs (default + smoke test + FishWIO demo)
+├── docs/                     # Guides for metrics/methods (with visuals) and data sources
 ├── data/
 │   ├── raw/                  # Local raw datasets (not tracked by Git)
 │   ├── manifests/            # Standardized dataset CSV manifests (local)
@@ -108,6 +109,11 @@ python scripts/download_datasets.py --dataset frgt --dataset fishwio --dataset f
 ```
 
 See [`data/raw/README.md`](data/raw/README.md) for source links, manual repositories, and wild-only filtering notes.
+
+## Documentation
+
+- [**Metrics and Methods Guide**](docs/metrics_and_methods.md): Backbone extraction, pooling, DR (`PCA`, `openTSNE`, `UMAP`), clustering (`HDBSCAN`, `Ward`, `k-means`, `GMM`), and every evaluation metric (`V-measure`, `ARI`, `AMI`, `DBCV`, `Trustworthiness`, `Continuity`, `RQ2` mixing and OOD) explained with visual examples.
+- [**Data Sources Tracker**](docs/data_sources.md): Unified manifest schema, per-dataset local layout, download methods, wild-only filtering rules, and checklist for adding new datasets.
 
 ## Development Plan
 
