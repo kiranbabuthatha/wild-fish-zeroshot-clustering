@@ -114,6 +114,7 @@ See [`data/raw/README.md`](data/raw/README.md) for source links, manual reposito
 
 - [**Metrics and Methods Guide**](docs/metrics_and_methods.md): Backbone extraction, pooling, DR (`PCA`, `openTSNE`, `UMAP`), clustering (`HDBSCAN`, `Ward`, `k-means`, `GMM`), and every evaluation metric (`V-measure`, `ARI`, `AMI`, `DBCV`, `Trustworthiness`, `Continuity`, `RQ2` mixing and OOD) explained with visual examples.
 - [**Data Sources Tracker**](docs/data_sources.md): Unified manifest schema, per-dataset local layout, download methods, wild-only filtering rules, and checklist for adding new datasets.
+- [**Project Progress Log**](docs/project_log.md): Living milestone log, experiment metrics table, iteration backlog, and open technical/supervisor questions.
 
 ## Development Plan
 
