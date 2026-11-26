@@ -11,10 +11,10 @@ This repository contains the base pipeline for evaluating frozen Vision Transfor
 - **RQ1 (Transfer to Wild Fish):** How well do frozen Vision Transformer representations (`DINOv3`, `BioCLIP 2`, `AquaticCLIP`), dimensionality reduction (`PCA`, `openTSNE`, `UMAP`), and clustering methods (`HDBSCAN`, `Ward`, `k-means`, `GMM`) transfer from terrestrial wildlife benchmarks to open wild marine and brackish fish datasets?
 - **RQ2 (SCHUFI & Cross-Dataset Relation):** When open fish datasets and `SCHUFI` Baltic Sea images share the same embedding space, do species group together across datasets, or do images separate by camera, resolution, background, turbidity, or novel local Baltic species?
 
-Key methodological controls built into the planned pipeline:
+Key methodological controls built into the pipeline:
 - Video/track near-duplicate sampling caps and wild-only dataset filtering (e.g., removing mesocosm cod from `FjordFish` and excluding captive/web subsets from `FishDet-M`).
 - Optional foreground mask check (`FRGT` binary masks) and equalized-resolution control runs.
-- Dual-space evaluation: clustering in 2-D projections (plus high-D comparison) checked with `Trustworthiness` and `Continuity`, while `RQ2` nearest-neighbor mixing and OOD scoring run directly in the L2-normalized high-dimensional embedding space.
+- Dual-space evaluation: clustering in 2-D projections and L2-normalized high-D embeddings checked with `Trustworthiness` and `Continuity`, while `RQ2` nearest-neighbor mixing and OOD scoring run directly in the high-dimensional embedding space.
 
 ## Repository Structure
 
@@ -52,6 +52,26 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
+## Quickstart
+
+1. Build unified dataset manifests from local `data/raw/` folders:
+
+```bash
+python scripts/build_manifests.py --config configs/smoke_test.yaml
+```
+
+2. Run the clustering, evaluation, and HTML visual atlas pipeline (add `--extractor-backend dummy` for fast offline smoke checks without GPU checkpoints):
+
+```bash
+python scripts/run_pipeline.py --config configs/smoke_test.yaml
+```
+
+3. Run the unit test suite:
+
+```bash
+pytest -v
+```
+
 ## Local Data Layout
 
 Raw fish datasets and cached embeddings are kept local only and ignored by Git. Place open-source datasets under `data/raw/<dataset_name>/` before building manifests:
@@ -79,8 +99,8 @@ See [`data/raw/README.md`](data/raw/README.md) for source links, manual reposito
 
 ## Development Plan
 
-1. **Initial Structure (current):** Clean folder layout, dependency setup, and YAML configs.
-2. **Data & Configs:** Typed YAML config loader, unified manifest schema, video-cap sampler, background mask toggle, and resolution control.
-3. **Feature Extraction & Reduction:** Frozen `DINOv3` (`CLS` and `patch_mean` pooling) + `BioCLIP 2` wrapper, embedding cache, and `openTSNE` out-of-sample projection.
-4. **Metrics & Visual Atlas:** `V-measure`/`ARI`/`AMI`/`DBCV`/`UMAP-silhouette`, `Trustworthiness`/`Continuity`, high-D `kNN` mixing & OOD scores, and interactive HTML atlas.
-5. **CLI & Smoke Test:** Runnable end-to-end `scripts/run_pipeline.py` plus unit tests (`pytest`).
+1. **Initial Structure (done):** Clean folder layout, dependency setup, and YAML configs.
+2. **Data & Configs (done):** Typed YAML config loader, unified manifest schema, video-cap sampler, background mask toggle, and resolution control.
+3. **Feature Extraction & Reduction (done):** Frozen `DINOv3` (`CLS` and `patch_mean` pooling) + `BioCLIP 2` wrapper, embedding cache, and `openTSNE` out-of-sample projection.
+4. **Metrics, Visual Atlas & Pipeline (done):** `V-measure`/`ARI`/`AMI`/`DBCV`/`silhouette`, `Trustworthiness`/`Continuity`, high-D `kNN` mixing & OOD scores, interactive HTML atlas, runnable `scripts/run_pipeline.py`, and `pytest` unit tests.
+5. **Frame Cropping (pending detector confirmation):** Wire `scripts/crop_schufi_frames.py` once `Grounding DINO` vs. `FishDet-M` is chosen on Baltic Sea frames.
