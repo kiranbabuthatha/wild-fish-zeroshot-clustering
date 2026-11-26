@@ -16,8 +16,10 @@ from fish_clustering.data import (
     cap_images_per_species,
     crop_bbox,
     equalize_resolution,
+    filter_min_images_per_species,
     filter_shared_species,
     filter_species_level,
+    filter_top_n_species,
     load_image_sample,
 )
 
@@ -189,6 +191,30 @@ def test_sampling_caps_and_filters() -> None:
         seed=42,
     )
     assert len(combined) <= 3
+
+    # Multi-species video_id preserves up to max_per_video per species inside the same clip.
+    multi_sp = pd.DataFrame(
+        [
+            {"image_id": f"a_{i}", "dataset": "fishwio", "species": "Species A", "label_raw": "Species A", "video_id": "clip1", "is_species_level": True}
+            for i in range(4)
+        ]
+        + [
+            {"image_id": f"b_{i}", "dataset": "fishwio", "species": "Species B", "label_raw": "Species B", "video_id": "clip1", "is_species_level": True}
+            for i in range(3)
+        ]
+        + [
+            {"image_id": "c_0", "dataset": "fishwio", "species": "Species C", "label_raw": "Species C", "video_id": "clip1", "is_species_level": True}
+        ]
+    )
+    multi_capped = cap_crops_per_video(multi_sp, max_per_video=2, seed=42)
+    assert len(multi_capped) == 5
+    assert set(multi_capped["species"]) == {"Species A", "Species B", "Species C"}
+
+    min_filtered = filter_min_images_per_species(multi_sp, min_per_species=3)
+    assert set(min_filtered["species"]) == {"Species A", "Species B"}
+
+    top1 = filter_top_n_species(multi_sp, top_n=1)
+    assert set(top1["species"]) == {"Species A"}
 
 
 def test_preprocessing_bbox_mask_and_equalize(tmp_path: Path) -> None:

@@ -15,8 +15,10 @@ from fish_clustering.data.sampling import (
     apply_sampling_filters,
     cap_crops_per_video,
     cap_images_per_species,
+    filter_min_images_per_species,
     filter_shared_species,
     filter_species_level,
+    filter_top_n_species,
 )
 
 __all__ = [
@@ -29,7 +31,9 @@ __all__ = [
     "cap_images_per_species",
     "crop_bbox",
     "equalize_resolution",
+    "filter_min_images_per_species",
     "filter_shared_species",
     "filter_species_level",
+    "filter_top_n_species",
     "load_image_sample",
 ]

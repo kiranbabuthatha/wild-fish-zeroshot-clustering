@@ -41,6 +41,8 @@ class DataConfig:
     datasets: list[str]
     max_crops_per_video: int | None = None
     max_images_per_species: int | None = None
+    min_images_per_species: int | None = None
+    top_n_species: int | None = None
     use_foreground_mask: bool = False
     equalize_resolution: int | None = None
 
@@ -53,6 +55,10 @@ class DataConfig:
             raise ValueError("data.max_crops_per_video must be positive or null.")
         if self.max_images_per_species is not None and self.max_images_per_species <= 0:
             raise ValueError("data.max_images_per_species must be positive or null.")
+        if self.min_images_per_species is not None and self.min_images_per_species <= 0:
+            raise ValueError("data.min_images_per_species must be positive or null.")
+        if self.top_n_species is not None and self.top_n_species <= 0:
+            raise ValueError("data.top_n_species must be positive or null.")
         if isinstance(self.equalize_resolution, bool):
             raise ValueError("data.equalize_resolution must be an integer pixel size or null.")
         if self.equalize_resolution is not None and self.equalize_resolution <= 0:

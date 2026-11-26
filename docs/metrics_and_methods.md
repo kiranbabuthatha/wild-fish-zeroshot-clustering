@@ -58,7 +58,7 @@ All vision backbones run strictly frozen in evaluation mode (`torch.inference_mo
 2. **openTSNE (`fit_tsne`):** uses `openTSNE.TSNE` with `metric="cosine"` and `initialization="pca"`. Unlike scikit-learn's `TSNE`, `openTSNE` returns a fitted `TSNEEmbedding` object supporting **out-of-sample projection** (`transform_new_points`), letting held-out `SCHUFI` or `HODOR` Baltic Sea crops be placed into a fixed open-ocean reference map without distorting reference clusters.
 3. **UMAP (`fit_umap`):** constructs a fuzzy simplicial neighborhood graph (`metric="cosine"`, `umap_n_neighbors`, `umap_min_dist`) and supports `.transform()` for new points.
 
-Below is an actual `UMAP` thumbnail atlas from our `FishWIO` + frozen `DINOv3 ViT-B/16` demo (`369` wild reef fish images across `95` species), followed by the corresponding projection-quality comparison across `PCA`, `t-SNE`, and `UMAP`:
+Below is an actual `UMAP` thumbnail atlas from our `FishWIO` + frozen `DINOv3 ViT-B/16` demo (`900` wild reef fish images across `30` species), followed by the corresponding projection-quality comparison across `PCA`, `t-SNE`, and `UMAP`:
 
 ![FishWIO UMAP Thumbnail Atlas](assets/fishwio_thumbnails_umap.png)
 
@@ -173,10 +173,11 @@ All RQ2 metrics operate **directly on the L2-normalized high-D embeddings** (`me
 
 ## 4. Real Walkthrough: `FishWIO` with Frozen `DINOv3 ViT-B/16`
 
-Running [`configs/fishwio_dinov3_demo.yaml`](../configs/fishwio_dinov3_demo.yaml) (`369` wild reef fish images across `95` classes, capped at `3` crops per video and `15` images per species, `768-D` `facebook/dinov3-vitb16-pretrain-lvd1689m`, `cls` pooling) gives concrete intuition for how these metrics read together:
+Running [`configs/fishwio_dinov3_demo.yaml`](../configs/fishwio_dinov3_demo.yaml) (`900` wild reef fish images across `30` species, `20-30` images per species, `max_crops_per_video: 5` per species, `768-D` `facebook/dinov3-vitb16-pretrain-lvd1689m`, `cls` pooling) illustrates how all metric groups behave together:
 
 1. **Projection Quality (`projection_metrics.csv`):**
-   - `t-SNE` (`Trust=0.894`, `Cont=0.885`, `Jaccard=0.342`) and `UMAP` (`Trust=0.893`, `Cont=0.892`, `Jaccard=0.345`) beat linear `PCA` (`Trust=0.751`, `Cont=0.849`, `Jaccard=0.162`). Linear PCA drops ~14 points in Trustworthiness because `95` fine-grained reef species do not lie in a 2-D plane.
+   - `t-SNE` (`Trust=0.967`, `Cont=0.950`, `Jaccard=0.488`) and `UMAP` (`Trust=0.960`, `Cont=0.950`, `Jaccard=0.433`) strongly outperform linear `PCA` (`Trust=0.739`, `Cont=0.876`, `Jaccard=0.102`).
 2. **High-D vs. 2-D Clustering (`clustering_metrics.csv`):**
-   - `High-D Ward` achieves the highest species alignment (`V-Measure = 0.861`, `Homogeneity = 0.879`, `Completeness = 0.844`, `ARI = 0.479`, `AMI = 0.617`), closely tracked by `t-SNE Ward` (`V-Measure = 0.855`, `ARI = 0.452`) and `UMAP Ward` (`V-Measure = 0.827`, `ARI = 0.388`), while `PCA Ward` drops sharply (`V-Measure = 0.687`, `ARI = 0.060`).
-   - Meanwhile, `HDBSCAN` with `min_cluster_size=10` marks `87%` of points as noise in `768-D` because Euclidean density drops in 768 dimensions and many `FishWIO` species have only 1 to 6 samples after video capping; in `UMAP`, `HDBSCAN` gains high geometric silhouette (`0.630`) and `DBCV` (`0.650`) by merging coarse shapes into 2 broad clusters, yielding `V-Measure = 0.144`. This shows why **comparing label-free scores (`Silhouette`/`DBCV`) alongside supervised agreement (`V-Measure`/`ARI`/`AMI`) and multiple algorithms** is essential for wild marine data.
+   - With `20-30` samples per species, `UMAP HDBSCAN` automatically discovers `31` clusters out of `30` species (`V-Measure = 0.837`, `Homogeneity = 0.835`, `Completeness = 0.840`, `ARI = 0.646`, `AMI = 0.805`, `DBCV = 0.643`), and `t-SNE HDBSCAN` discovers `22` clusters (`V-Measure = 0.776`, `AMI = 0.744`).
+   - Fixed-`k` methods peak on `UMAP Ward` (`V-Measure = 0.870`, `ARI = 0.747`, `AMI = 0.846`, `Silhouette = 0.670`), `UMAP k-means` (`V-Measure = 0.866`, `ARI = 0.742`), and `High-D Ward` (`V-Measure = 0.809`, `ARI = 0.600`, `AMI = 0.773`), whereas `PCA Ward` lags behind (`V-Measure = 0.438`, `ARI = 0.130`).
+   - Notice `High-D HDBSCAN` (`min_cluster_size=10`) still marks `61.8%` of 768-D embeddings as noise (`V-Measure = 0.319`), confirming why Markoff et al. (2026) and this thesis compare density clustering on low-D `t-SNE`/`UMAP` embeddings against hierarchical clustering (`Ward`) in high dimensions.

@@ -158,6 +158,8 @@ def run_experiment(
     manifest = apply_sampling_filters(
         raw_manifest,
         max_crops_per_video=cfg.data.max_crops_per_video,
+        min_images_per_species=cfg.data.min_images_per_species,
+        top_n_species=cfg.data.top_n_species,
         max_images_per_species=cfg.data.max_images_per_species,
         seed=cfg.experiment.seeds[0],
     )

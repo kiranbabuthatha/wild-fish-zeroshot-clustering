@@ -12,6 +12,14 @@ def _is_missing(value: object) -> bool:
     return isinstance(value, str) and value.strip() == ""
 
 
+def _resolve_class_key(dataset: object, species: object, label_raw: object, idx: int) -> str:
+    if not _is_missing(species):
+        return f"species::{str(species).strip()}"
+    if not _is_missing(label_raw):
+        return f"{dataset}::label::{str(label_raw).strip()}"
+    return f"row::{idx}"
+
+
 def _sample_by_group(
     df: pd.DataFrame,
     group_keys: pd.Series,
@@ -44,7 +52,7 @@ def cap_crops_per_video(
     max_per_video: int | None,
     seed: int = 42,
 ) -> pd.DataFrame:
-    """Cap crops drawn from any single video sequence to curb frame duplicates."""
+    """Cap crops per (dataset, video_id, class) so multi-species clips stay balanced."""
     if max_per_video is None:
         return df.copy()
     if max_per_video <= 0:
@@ -52,10 +60,16 @@ def cap_crops_per_video(
     if df.empty:
         return df.copy()
 
-    keys = [
-        f"{ds}::vid::{vid}" if not _is_missing(vid) else f"row::{idx}"
-        for idx, (ds, vid) in enumerate(zip(df["dataset"], df["video_id"]))
-    ]
+    keys: list[str] = []
+    for idx, (ds, vid, sp, raw_lbl) in enumerate(
+        zip(df["dataset"], df["video_id"], df["species"], df["label_raw"])
+    ):
+        if _is_missing(vid):
+            keys.append(f"row::{idx}")
+        else:
+            cls_key = _resolve_class_key(ds, sp, raw_lbl, idx)
+            keys.append(f"{ds}::vid::{vid}::{cls_key}")
+
     return _sample_by_group(df, pd.Series(keys, index=df.index), max_per_video, seed)
 
 
@@ -72,18 +86,66 @@ def cap_images_per_species(
     if df.empty:
         return df.copy()
 
-    keys: list[str] = []
-    for idx, (ds, sp, raw_lbl) in enumerate(
-        zip(df["dataset"], df["species"], df["label_raw"])
-    ):
-        if not _is_missing(sp):
-            keys.append(f"species::{sp}")
-        elif not _is_missing(raw_lbl):
-            keys.append(f"{ds}::label::{raw_lbl}")
-        else:
-            keys.append(f"row::{idx}")
-
+    keys = [
+        _resolve_class_key(ds, sp, raw_lbl, idx)
+        for idx, (ds, sp, raw_lbl) in enumerate(
+            zip(df["dataset"], df["species"], df["label_raw"])
+        )
+    ]
     return _sample_by_group(df, pd.Series(keys, index=df.index), max_per_species, seed)
+
+
+def filter_min_images_per_species(
+    df: pd.DataFrame,
+    min_per_species: int | None,
+) -> pd.DataFrame:
+    """Drop rare classes having fewer than min_per_species rows."""
+    if min_per_species is None:
+        return df.copy()
+    if min_per_species <= 0:
+        raise ValueError("min_per_species must be positive when provided.")
+    if df.empty:
+        return df.copy()
+
+    keys = pd.Series(
+        [
+            _resolve_class_key(ds, sp, raw_lbl, idx)
+            for idx, (ds, sp, raw_lbl) in enumerate(
+                zip(df["dataset"], df["species"], df["label_raw"])
+            )
+        ],
+        index=df.index,
+    )
+    counts = keys.value_counts()
+    keep_keys = set(counts[counts >= min_per_species].index)
+    return df.loc[keys.isin(keep_keys)].reset_index(drop=True)
+
+
+def filter_top_n_species(
+    df: pd.DataFrame,
+    top_n: int | None,
+) -> pd.DataFrame:
+    """Retain rows belonging to the top_n most frequent species/classes."""
+    if top_n is None:
+        return df.copy()
+    if top_n <= 0:
+        raise ValueError("top_n must be positive when provided.")
+    if df.empty:
+        return df.copy()
+
+    keys = pd.Series(
+        [
+            _resolve_class_key(ds, sp, raw_lbl, idx)
+            for idx, (ds, sp, raw_lbl) in enumerate(
+                zip(df["dataset"], df["species"], df["label_raw"])
+            )
+        ],
+        index=df.index,
+    )
+    counts = keys.value_counts()
+    ranked = sorted(counts.items(), key=lambda item: (-int(item[1]), str(item[0])))
+    keep_keys = {k for k, _ in ranked[:top_n]}
+    return df.loc[keys.isin(keep_keys)].reset_index(drop=True)
 
 
 def filter_species_level(df: pd.DataFrame) -> pd.DataFrame:
@@ -116,15 +178,19 @@ def apply_sampling_filters(
     *,
     species_level_only: bool = False,
     max_crops_per_video: int | None = None,
+    min_images_per_species: int | None = None,
+    top_n_species: int | None = None,
     max_images_per_species: int | None = None,
     shared_species_min_datasets: int | None = None,
     seed: int = 42,
 ) -> pd.DataFrame:
-    """Apply taxonomic, duplicate-video, and class-cap filters in standard order."""
+    """Apply taxonomic, duplicate-video, class-support, and cap filters in order."""
     filtered = df.copy()
     if species_level_only:
         filtered = filter_species_level(filtered)
     filtered = cap_crops_per_video(filtered, max_crops_per_video, seed=seed)
+    filtered = filter_min_images_per_species(filtered, min_images_per_species)
+    filtered = filter_top_n_species(filtered, top_n_species)
     filtered = cap_images_per_species(filtered, max_images_per_species, seed=seed)
     if shared_species_min_datasets is not None:
         filtered = filter_shared_species(filtered, min_datasets=shared_species_min_datasets)

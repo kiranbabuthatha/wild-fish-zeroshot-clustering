@@ -9,8 +9,10 @@ data:
   raw_root: data/raw
   datasets:
     - fishwio
-  max_crops_per_video: 3
-  max_images_per_species: 15
+  max_crops_per_video: 5
+  min_images_per_species: 20
+  top_n_species: 30
+  max_images_per_species: 30
   use_foreground_mask: false
   equalize_resolution: null
 

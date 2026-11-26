@@ -21,11 +21,15 @@ def test_load_default_and_smoke_configs() -> None:
     assert smoke_cfg.experiment.name == "frgt_smoke_test"
     assert smoke_cfg.data.datasets == ["frgt"]
     assert smoke_cfg.data.max_images_per_species == 20
+    assert smoke_cfg.data.min_images_per_species is None
+    assert smoke_cfg.data.top_n_species is None
     assert smoke_cfg.data.manifest_path == Path("data/manifests/smoke_frgt.csv")
 
     fishwio_cfg = load_config(REPO_ROOT / "configs" / "fishwio_dinov3_demo.yaml")
     assert fishwio_cfg.experiment.name == "fishwio_dinov3_demo"
     assert fishwio_cfg.data.datasets == ["fishwio"]
+    assert fishwio_cfg.data.min_images_per_species == 20
+    assert fishwio_cfg.data.top_n_species == 30
     assert fishwio_cfg.model.backbone == "dinov3_vitb16"
 
 
