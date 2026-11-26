@@ -60,13 +60,25 @@ pip install -e .
 python scripts/build_manifests.py --config configs/smoke_test.yaml
 ```
 
-2. Run the clustering, evaluation, and HTML visual atlas pipeline (add `--extractor-backend dummy` for fast offline smoke checks without GPU checkpoints):
+2. Run the clustering, evaluation, interactive explorer, and static figure pipeline (add `--extractor-backend dummy` for fast offline smoke checks without GPU checkpoints):
 
 ```bash
 python scripts/run_pipeline.py --config configs/smoke_test.yaml
 ```
 
-3. Run the unit test suite:
+3. View the results locally:
+   - **Interactive Web Explorer (Markoff 2026 style with fish thumbnails, high-D neighbors, centroids/hulls, distortion, and OOD overlay):**
+     ```bash
+     open outputs/visual_atlas/frgt_smoke_test/explorer/index.html
+     ```
+     Or serve via local HTTP server:
+     ```bash
+     python -m http.server 8000 --directory outputs/visual_atlas/frgt_smoke_test/explorer
+     ```
+   - **Static 300-DPI Thesis Figures:** inspect `outputs/visual_atlas/frgt_smoke_test/figures/*.png`
+   - **Metric Tables:** inspect `outputs/metrics/frgt_smoke_test/summary.json`, `clustering_metrics.csv`, and `projection_metrics.csv`
+
+4. Run the unit test suite:
 
 ```bash
 pytest -v

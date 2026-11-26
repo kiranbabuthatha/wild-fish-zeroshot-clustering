@@ -11,6 +11,7 @@ from fish_clustering.visualization import (
     build_atlas_dataframe,
     export_diagnostic_atlas_html,
     export_interactive_explorer,
+    export_static_figures,
     export_visual_atlas_html,
 )
 
@@ -150,3 +151,62 @@ def test_export_interactive_explorer_with_thumbnails_and_masks(tmp_path: Path) -
     assert set(geom["centroids"].keys()) == {"0", "1"}
     assert set(geom["hulls"].keys()) == {"0", "1"}
     assert payload["runs"]["42"]["umap"]["clusterings"]["kmeans"]["metrics"]["dbcv"] is None
+
+
+def test_export_static_figures(tmp_path: Path) -> None:
+    raw_root = tmp_path / "raw"
+    (raw_root / "ozfish").mkdir(parents=True, exist_ok=True)
+    rows = []
+    for i in range(12):
+        img_rel = f"ozfish/fish_{i}.png"
+        Image.new("RGB", (32, 32), (20 * i, 100, 200)).save(raw_root / img_rel)
+        rows.append(
+            {
+                "image_id": f"oz_{i}",
+                "dataset": "ozfish" if i < 6 else "fishwio",
+                "label_raw": "Caranx_melampygus" if i < 6 else "Chromis_chromis",
+                "species": "Caranx melampygus" if i < 6 else "Chromis chromis",
+                "image_path": img_rel,
+            }
+        )
+
+    manifest = pd.DataFrame(rows)
+    rng = np.random.default_rng(7)
+    embeddings = rng.normal(size=(12, 8)).astype(np.float32)
+    coords = rng.normal(size=(12, 2)).astype(np.float32)
+    labels = np.array([0] * 6 + [1] * 6, dtype=np.int64)
+    run_data = {
+        7: {
+            "pca": {
+                "coords": coords,
+                "clusterings": {"hdbscan": {"labels": labels, "metrics": {}}},
+            },
+            "umap": {
+                "coords": coords * 1.2,
+                "clusterings": {"hdbscan": {"labels": labels, "metrics": {}}},
+            },
+        }
+    }
+    projection_rows = [
+        {"seed": 7, "reduction": "pca", "trustworthiness": 0.85, "continuity": 0.9, "mean_neighborhood_jaccard": 0.5},
+        {"seed": 7, "reduction": "umap", "trustworthiness": 0.92, "continuity": 0.93, "mean_neighborhood_jaccard": 0.7},
+    ]
+
+    fig_paths = export_static_figures(
+        experiment_name="fig_unit",
+        manifest=manifest,
+        embeddings=embeddings,
+        run_data=run_data,
+        projection_rows=projection_rows,
+        ood_scores=np.linspace(0.1, 0.5, 12, dtype=np.float32),
+        output_dir=tmp_path / "figures",
+        raw_root=raw_root,
+        mixing_entropies=np.linspace(0.2, 0.8, 12, dtype=np.float32),
+        true_labels=manifest["species"].tolist(),
+        primary_seed=7,
+    )
+    assert len(fig_paths) >= 10
+    for fig_file in fig_paths:
+        p = Path(fig_file)
+        assert p.is_file()
+        assert p.read_bytes()[:4] == b"\x89PNG"

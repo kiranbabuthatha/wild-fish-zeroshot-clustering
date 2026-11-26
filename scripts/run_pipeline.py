@@ -32,6 +32,7 @@ from fish_clustering.visualization import (
     build_atlas_dataframe,
     export_diagnostic_atlas_html,
     export_interactive_explorer,
+    export_static_figures,
     export_visual_atlas_html,
 )
 
@@ -202,12 +203,14 @@ def run_experiment(
     )
 
     rq2_summary: dict[str, Any] = {}
+    mixing_entropies: np.ndarray | None = None
     if cfg.evaluation.compute_rq2_mixing:
         mixing = compute_dataset_mixing_entropy(
             embeddings,
             datasets_col,
             k_neighbors=cfg.evaluation.k_neighbors,
         )
+        mixing_entropies = mixing["per_sample_entropy"]
         cross_match = compute_cross_dataset_species_match(
             embeddings,
             datasets_col,
@@ -359,6 +362,20 @@ def run_experiment(
             rq2_summary=rq2_summary,
         )
 
+    static_figure_paths = export_static_figures(
+        experiment_name=cfg.experiment.name,
+        manifest=manifest,
+        embeddings=embeddings,
+        run_data=explorer_run_data,
+        projection_rows=projection_rows,
+        ood_scores=ood_scores,
+        output_dir=vis_dir / "figures",
+        raw_root=cfg.data.raw_root,
+        mixing_entropies=mixing_entropies,
+        true_labels=true_labels,
+        primary_seed=cfg.experiment.seeds[0],
+    )
+
     clustering_csv = metrics_dir / "clustering_metrics.csv"
     pd.DataFrame(clustering_rows).to_csv(clustering_csv, index=False)
 
@@ -376,6 +393,7 @@ def run_experiment(
         "clustering_metrics_path": str(clustering_csv),
         "projection_metrics_path": str(projection_csv) if projection_rows else None,
         "explorer_html_path": str(explorer_html_path) if explorer_html_path else None,
+        "static_figure_paths": static_figure_paths,
         "visual_atlas_paths": vis_paths,
         "rq2": rq2_summary,
     }

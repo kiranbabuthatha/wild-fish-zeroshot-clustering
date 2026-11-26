@@ -105,6 +105,9 @@ cropping:
     assert (explorer_html.parent / "explorer_data.json").is_file()
     assert (explorer_html.parent / "explorer_data.js").is_file()
     assert any((explorer_html.parent / "thumbs").iterdir())
+    assert len(summary["static_figure_paths"]) >= 8
+    for fig_path in summary["static_figure_paths"]:
+        assert Path(fig_path).is_file()
     assert len(summary["visual_atlas_paths"]) == 6
     for html_path in summary["visual_atlas_paths"]:
         assert Path(html_path).is_file()

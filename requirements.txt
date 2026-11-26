@@ -13,6 +13,7 @@ openTSNE>=1.0
 umap-learn>=0.5
 hdbscan>=0.8.33
 plotly>=5.20
+matplotlib>=3.8
 PyYAML>=6.0
 tqdm>=4.66
 pytest>=8.0
