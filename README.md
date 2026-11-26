@@ -66,6 +66,17 @@ Raw fish datasets and cached embeddings are kept local only and ignored by Git. 
 - `data/raw/hodor/` (`HODOR` Baltic Sea Kiel Fjord frames/crops)
 - `data/raw/schufi/` (`SCHUFI` Baltic Sea target frames)
 
+### Downloading Datasets
+
+Check which datasets are already present locally or fetch public datasets into `data/raw/` using [`scripts/download_datasets.py`](scripts/download_datasets.py):
+
+```bash
+python scripts/download_datasets.py --list
+python scripts/download_datasets.py --dataset frgt --dataset fishwio --dataset fjordfish
+```
+
+See [`data/raw/README.md`](data/raw/README.md) for source links, manual repositories, and wild-only filtering notes.
+
 ## Development Plan
 
 1. **Initial Structure (current):** Clean folder layout, dependency setup, and YAML configs.
