@@ -1,0 +1,78 @@
+# Default thesis experiment configuration
+experiment:
+  name: wild_fish_default
+  seeds: [42, 43, 44]
+  device: auto  # auto selects cuda, mps, or cpu
+
+data:
+  manifest_path: data/manifests/all_wild_fish.csv
+  raw_root: data/raw
+  # Wild marine and brackish benchmarks + Baltic target sets
+  datasets:
+    - frgt
+    - ozfish
+    - fishwio
+    - mediterranean
+    - fjordfish_wild
+    - brackish
+    - deepfish
+    - hodor
+    - schufi
+  # Per-video cap to limit consecutive-frame duplicates (WildlifeDatasets check)
+  max_crops_per_video: 5
+  # Optional class cap (null uses all available samples after video cap)
+  max_images_per_species: null
+  # Set true on FRGT to compare masked fish vs. bounding-box crops
+  use_foreground_mask: false
+  # Optional small target size (e.g. 64) for RQ2 equalized-resolution bias check
+  equalize_resolution: null
+
+model:
+  # Supported options: dinov3_vitb16, dinov3_vitl16, dinov3_vith16plus, bioclip2_vitl14
+  backbone: dinov3_vitb16
+  # Token pooling: cls or patch_mean
+  pooling: cls
+  batch_size: 32
+  image_size: 224
+  l2_normalize: true
+  cache_dir: outputs/embeddings
+
+reduction:
+  methods:
+    - pca
+    - tsne
+    - umap
+  n_components: 2
+  # openTSNE parameters (supports out-of-sample transform() for SCHUFI)
+  tsne_perplexity: 30
+  umap_n_neighbors: 15
+  umap_min_dist: 0.1
+
+clustering:
+  methods:
+    - hdbscan
+    - ward
+    - kmeans
+    - gmm
+  hdbscan_min_cluster_size: 15
+  # Also evaluate clustering directly on L2-normalized high-D embeddings
+  run_in_high_dim: true
+
+evaluation:
+  # OVGU visualization metrics for 2-D projections
+  compute_projection_quality: true
+  k_neighbors: 15
+  # Label-free cluster selection metrics (DBCV on <=10-D maps, UMAP silhouette)
+  compute_label_free: true
+  # RQ2 high-D dataset mixing, cross-dataset species match, and OOD checks
+  compute_rq2_mixing: true
+  output_dir: outputs/metrics
+
+visualization:
+  export_html: true
+  output_dir: outputs/visual_atlas
+
+cropping:
+  # Detector options for raw SCHUFI/HODOR frames: grounding_dino or fishdet_m
+  detector: grounding_dino
+  confidence_threshold: 0.35

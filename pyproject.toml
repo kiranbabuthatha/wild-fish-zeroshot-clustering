@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fish-zeroshot-clustering"
+version = "0.1.0"
+description = "Zero-shot clustering and cross-dataset analysis of wild marine and brackish fish images using frozen vision transformers."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+  { name = "Kiran Babu Thatha", email = "kiranbabu.thatha@gmail.com" },
+]
+dependencies = [
+  "torch>=2.2",
+  "torchvision>=0.17",
+  "timm>=1.0",
+  "transformers>=4.45",
+  "open-clip-torch>=2.26",
+  "Pillow>=10.0",
+  "numpy>=1.26",
+  "pandas>=2.1",
+  "pyarrow>=15.0",
+  "scikit-learn>=1.4",
+  "scipy>=1.12",
+  "openTSNE>=1.0",
+  "umap-learn>=0.5",
+  "hdbscan>=0.8.33",
+  "plotly>=5.20",
+  "PyYAML>=6.0",
+  "tqdm>=4.66",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

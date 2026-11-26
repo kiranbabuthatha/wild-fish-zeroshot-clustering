@@ -1,0 +1,75 @@
+# Zero-Shot Clustering of Wild Fish Images Using Vision Transformers
+
+**Master's Thesis Codebase (OVGU Magdeburg & SCHUFI, University of Rostock)**  
+**Author:** Kiran Babu Thatha (M.Sc. Digital Engineering, OVGU Magdeburg)  
+**Supervisors:** Prof. Dr.-Ing. habil. Holger Theisel (OVGU Magdeburg), Dr. Vivian Helen Fischbach & Sai Dheeraj Reddy Tippani (SCHUFI Project, University of Rostock)
+
+## Overview
+
+This repository contains the base pipeline for evaluating frozen Vision Transformers on wild marine and brackish fish imagery without task-specific training or fine-tuning. Building on Markoff, Bengtson & Ørsted (2026) as the reference study, the codebase is structured around two research questions:
+
+- **RQ1 (Transfer to Wild Fish):** How well do frozen Vision Transformer representations (`DINOv3`, `BioCLIP 2`, `AquaticCLIP`), dimensionality reduction (`PCA`, `openTSNE`, `UMAP`), and clustering methods (`HDBSCAN`, `Ward`, `k-means`, `GMM`) transfer from terrestrial wildlife benchmarks to open wild marine and brackish fish datasets?
+- **RQ2 (SCHUFI & Cross-Dataset Relation):** When open fish datasets and `SCHUFI` Baltic Sea images share the same embedding space, do species group together across datasets, or do images separate by camera, resolution, background, turbidity, or novel local Baltic species?
+
+Key methodological controls built into the planned pipeline:
+- Video/track near-duplicate sampling caps and wild-only dataset filtering (e.g., removing mesocosm cod from `FjordFish` and excluding captive/web subsets from `FishDet-M`).
+- Optional foreground mask check (`FRGT` binary masks) and equalized-resolution control runs.
+- Dual-space evaluation: clustering in 2-D projections (plus high-D comparison) checked with `Trustworthiness` and `Continuity`, while `RQ2` nearest-neighbor mixing and OOD scoring run directly in the L2-normalized high-dimensional embedding space.
+
+## Repository Structure
+
+```text
+Base_code_Thesis/
+├── configs/                  # Experiment YAML configs (default + smoke test)
+├── data/
+│   ├── raw/                  # Local raw datasets (not tracked by Git)
+│   ├── manifests/            # Standardized dataset CSV manifests (local)
+│   └── processed/            # Cropped SCHUFI/HODOR frames & masked subsets (local)
+├── outputs/
+│   ├── embeddings/           # Cached L2-normalized backbone embeddings
+│   ├── metrics/              # RQ1, RQ2, and projection quality JSON/CSV tables
+│   └── visual_atlas/         # Interactive HTML embedding explorer plots
+├── scripts/                  # CLI entry points (manifests, cropping, main pipeline)
+├── src/fish_clustering/      # Core Python package
+│   ├── config.py             # YAML config loader
+│   ├── data/                 # Manifest builders, samplers, and mask/resize transforms
+│   ├── models/               # Frozen ViT / VLM feature extractors and pooling
+│   ├── clustering/           # PCA, openTSNE (out-of-sample), UMAP, HDBSCAN/Ward/GMM
+│   ├── evaluation/           # RQ1 clustering, Trustworthiness/Continuity, DBCV, RQ2 OOD
+│   └── visualization/        # Interactive 2-D visual atlas with distortion/OOD flags
+└── tests/                    # Unit tests
+```
+
+## Setup
+
+Python 3.10 or 3.11 is recommended:
+
+```bash
+python3.11 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+pip install -e .
+```
+
+## Local Data Layout
+
+Raw fish datasets and cached embeddings are kept local only and ignored by Git. Place open-source datasets under `data/raw/<dataset_name>/` before building manifests:
+
+- `data/raw/frgt/` (`FRGT` crops and binary masks)
+- `data/raw/ozfish/` (`OzFish` crops)
+- `data/raw/fishwio/` (`FishWIO` crops and video metadata)
+- `data/raw/mediterranean/` (Coastal Mediterranean boxes)
+- `data/raw/fjordfish/` (`FjordFish`, filtered to wild RUV frames only)
+- `data/raw/brackish/` (`Brackish` Limfjorden dataset)
+- `data/raw/deepfish/` (`DeepFish` full habitat frames)
+- `data/raw/hodor/` (`HODOR` Baltic Sea Kiel Fjord frames/crops)
+- `data/raw/schufi/` (`SCHUFI` Baltic Sea target frames)
+
+## Development Plan
+
+1. **Initial Structure (current):** Clean folder layout, dependency setup, and YAML configs.
+2. **Data & Configs:** Typed YAML config loader, unified manifest schema, video-cap sampler, background mask toggle, and resolution control.
+3. **Feature Extraction & Reduction:** Frozen `DINOv3` (`CLS` and `patch_mean` pooling) + `BioCLIP 2` wrapper, embedding cache, and `openTSNE` out-of-sample projection.
+4. **Metrics & Visual Atlas:** `V-measure`/`ARI`/`AMI`/`DBCV`/`UMAP-silhouette`, `Trustworthiness`/`Continuity`, high-D `kNN` mixing & OOD scores, and interactive HTML atlas.
+5. **CLI & Smoke Test:** Runnable end-to-end `scripts/run_pipeline.py` plus unit tests (`pytest`).

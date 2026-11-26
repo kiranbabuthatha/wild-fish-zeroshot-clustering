@@ -1,0 +1,57 @@
+# Fast single-seed smoke-test configuration for pipeline verification
+experiment:
+  name: frgt_smoke_test
+  seeds: [42]
+  device: auto  # auto selects cuda, mps, or cpu
+
+data:
+  manifest_path: data/manifests/smoke_frgt.csv
+  raw_root: data/raw
+  datasets:
+    - frgt
+  max_crops_per_video: 5
+  max_images_per_species: 20
+  use_foreground_mask: false
+  equalize_resolution: null
+
+model:
+  backbone: dinov3_vitb16
+  pooling: cls
+  batch_size: 16
+  image_size: 224
+  l2_normalize: true
+  cache_dir: outputs/embeddings
+
+reduction:
+  methods:
+    - pca
+    - tsne
+    - umap
+  n_components: 2
+  tsne_perplexity: 15
+  umap_n_neighbors: 10
+  umap_min_dist: 0.1
+
+clustering:
+  methods:
+    - hdbscan
+    - ward
+    - kmeans
+    - gmm
+  hdbscan_min_cluster_size: 5
+  run_in_high_dim: true
+
+evaluation:
+  compute_projection_quality: true
+  k_neighbors: 10
+  compute_label_free: true
+  compute_rq2_mixing: false
+  output_dir: outputs/metrics
+
+visualization:
+  export_html: true
+  output_dir: outputs/visual_atlas
+
+cropping:
+  detector: grounding_dino
+  confidence_threshold: 0.35
