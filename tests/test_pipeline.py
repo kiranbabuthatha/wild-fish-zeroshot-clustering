@@ -100,6 +100,11 @@ cropping:
     assert Path(summary["cache_path"]).is_file()
     assert Path(summary["clustering_metrics_path"]).is_file()
     assert Path(summary["projection_metrics_path"]).is_file()
+    explorer_html = Path(summary["explorer_html_path"])
+    assert explorer_html.is_file()
+    assert (explorer_html.parent / "explorer_data.json").is_file()
+    assert (explorer_html.parent / "explorer_data.js").is_file()
+    assert any((explorer_html.parent / "thumbs").iterdir())
     assert len(summary["visual_atlas_paths"]) == 6
     for html_path in summary["visual_atlas_paths"]:
         assert Path(html_path).is_file()

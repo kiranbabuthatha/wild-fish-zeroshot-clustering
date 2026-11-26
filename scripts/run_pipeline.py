@@ -31,6 +31,7 @@ from fish_clustering.models import (
 from fish_clustering.visualization import (
     build_atlas_dataframe,
     export_diagnostic_atlas_html,
+    export_interactive_explorer,
     export_visual_atlas_html,
 )
 
@@ -232,12 +233,14 @@ def run_experiment(
     clustering_rows: list[dict[str, Any]] = []
     projection_rows: list[dict[str, Any]] = []
     vis_paths: list[str] = []
+    explorer_run_data: dict[int, dict[str, dict[str, Any]]] = {}
 
     metrics_dir = cfg.evaluation.output_dir / cfg.experiment.name
     metrics_dir.mkdir(parents=True, exist_ok=True)
     vis_dir = cfg.visualization.output_dir / cfg.experiment.name
 
     for seed in cfg.experiment.seeds:
+        explorer_run_data[seed] = {}
         if cfg.clustering.run_in_high_dim:
             high_res = run_clustering_suite(
                 embeddings,
@@ -269,6 +272,7 @@ def run_experiment(
 
         for red_name, red_res in reductions.items():
             distortion: np.ndarray | None = None
+            pq_summary: dict[str, Any] = {}
             if cfg.evaluation.compute_projection_quality and len(manifest) >= 5:
                 pq = compute_projection_quality(
                     embeddings,
@@ -276,16 +280,15 @@ def run_experiment(
                     n_neighbors=cfg.evaluation.k_neighbors,
                 )
                 distortion = pq["per_point_distortion"]
-                projection_rows.append(
-                    {
-                        "seed": seed,
-                        "reduction": red_name,
-                        "trustworthiness": pq["trustworthiness"],
-                        "continuity": pq["continuity"],
-                        "mean_neighborhood_jaccard": pq["mean_neighborhood_jaccard"],
-                        "k_neighbors": pq["k_neighbors"],
-                    }
-                )
+                pq_summary = {
+                    "seed": seed,
+                    "reduction": red_name,
+                    "trustworthiness": pq["trustworthiness"],
+                    "continuity": pq["continuity"],
+                    "mean_neighborhood_jaccard": pq["mean_neighborhood_jaccard"],
+                    "k_neighbors": pq["k_neighbors"],
+                }
+                projection_rows.append(pq_summary)
 
             low_res = run_clustering_suite(
                 red_res.coords,
@@ -295,15 +298,28 @@ def run_experiment(
                 seed=seed,
                 space=red_name,
             )
-            clustering_rows.extend(
-                evaluate_clustering_results(
-                    low_res,
-                    red_res.coords,
-                    true_labels=true_labels,
-                    compute_label_free=cfg.evaluation.compute_label_free,
-                    metric="euclidean",
-                )
+            low_eval_rows = evaluate_clustering_results(
+                low_res,
+                red_res.coords,
+                true_labels=true_labels,
+                compute_label_free=cfg.evaluation.compute_label_free,
+                metric="euclidean",
             )
+            clustering_rows.extend(low_eval_rows)
+
+            eval_by_method = {row["method"]: row for row in low_eval_rows}
+            explorer_run_data[seed][red_name] = {
+                "coords": red_res.coords,
+                "distortion": distortion,
+                "projection_metrics": pq_summary,
+                "clusterings": {
+                    method: {
+                        "labels": res.labels,
+                        "metrics": eval_by_method.get(method, {}),
+                    }
+                    for method, res in low_res.items()
+                },
+            }
 
             if cfg.visualization.export_html:
                 atlas_df = build_atlas_dataframe(
@@ -328,6 +344,21 @@ def run_experiment(
                 )
                 vis_paths.extend([str(atlas_path), str(diag_path)])
 
+    explorer_html_path: Path | None = None
+    if cfg.visualization.export_html:
+        explorer_html_path = export_interactive_explorer(
+            experiment_name=cfg.experiment.name,
+            backbone=extractor.backbone_name,
+            pooling=extractor.pooling,
+            manifest=manifest,
+            embeddings=embeddings,
+            run_data=explorer_run_data,
+            ood_scores=ood_scores,
+            output_dir=vis_dir / "explorer",
+            raw_root=cfg.data.raw_root,
+            rq2_summary=rq2_summary,
+        )
+
     clustering_csv = metrics_dir / "clustering_metrics.csv"
     pd.DataFrame(clustering_rows).to_csv(clustering_csv, index=False)
 
@@ -344,6 +375,7 @@ def run_experiment(
         "cache_path": str(cached.cache_path) if cached.cache_path else None,
         "clustering_metrics_path": str(clustering_csv),
         "projection_metrics_path": str(projection_csv) if projection_rows else None,
+        "explorer_html_path": str(explorer_html_path) if explorer_html_path else None,
         "visual_atlas_paths": vis_paths,
         "rq2": rq2_summary,
     }
