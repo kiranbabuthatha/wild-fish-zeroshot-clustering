@@ -134,6 +134,11 @@ def test_export_interactive_explorer_with_thumbnails_and_masks(tmp_path: Path) -
         thumb_max_size=64,
     )
     assert index_path.is_file()
+    html_text = index_path.read_text(encoding="utf-8")
+    assert "theme-toggle-btn" in html_text
+    assert "body.dark" in html_text
+    assert "plotly_dark" in html_text
+    assert "fish_atlas_theme" in html_text
     assert (explorer_dir / "explorer_data.js").is_file()
     json_path = explorer_dir / "explorer_data.json"
     assert json_path.is_file()

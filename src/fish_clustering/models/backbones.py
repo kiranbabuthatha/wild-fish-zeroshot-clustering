@@ -22,6 +22,7 @@ class BackboneSpec:
     model_id: str
     default_image_size: int
     description: str
+    hf_model_id: str | None = None
 
 
 BACKBONE_SPECS: dict[str, BackboneSpec] = {
@@ -31,6 +32,7 @@ BACKBONE_SPECS: dict[str, BackboneSpec] = {
         model_id="vit_base_patch16_dinov3.lvd1689m",
         default_image_size=224,
         description="DINOv3 ViT-B/16 self-supervised backbone pretrained on LVD-1689M.",
+        hf_model_id="facebook/dinov3-vitb16-pretrain-lvd1689m",
     ),
     "dinov3_vitl16": BackboneSpec(
         name="dinov3_vitl16",
@@ -38,6 +40,7 @@ BACKBONE_SPECS: dict[str, BackboneSpec] = {
         model_id="vit_large_patch16_dinov3.lvd1689m",
         default_image_size=224,
         description="DINOv3 ViT-L/16 self-supervised backbone pretrained on LVD-1689M.",
+        hf_model_id="facebook/dinov3-vitl16-pretrain-lvd1689m",
     ),
     "dinov3_vith16plus": BackboneSpec(
         name="dinov3_vith16plus",
@@ -45,6 +48,7 @@ BACKBONE_SPECS: dict[str, BackboneSpec] = {
         model_id="vit_huge_plus_patch16_dinov3.lvd1689m",
         default_image_size=224,
         description="DINOv3 ViT-H+/16 self-supervised backbone pretrained on LVD-1689M.",
+        hf_model_id="facebook/dinov3-vith16plus-pretrain-lvd1689m",
     ),
     "bioclip2_vitl14": BackboneSpec(
         name="bioclip2_vitl14",
@@ -188,6 +192,66 @@ class TimmViTExtractor(BaseFeatureExtractor):
         return pooled.detach().cpu().numpy().astype(np.float32, copy=False)
 
 
+class HuggingFaceViTExtractor(BaseFeatureExtractor):
+    """Frozen HuggingFace Transformers ViT extractor for gated DINOv3 models."""
+
+    def __init__(
+        self,
+        spec: BackboneSpec,
+        *,
+        pooling: str = "cls",
+        device: str = "cpu",
+        image_size: int | None = None,
+    ) -> None:
+        target_size = image_size or spec.default_image_size
+        super().__init__(
+            spec.name,
+            pooling=pooling,
+            device=device,
+            image_size=target_size,
+        )
+        import torch
+        from transformers import AutoImageProcessor, AutoModel
+
+        hf_id = spec.hf_model_id or spec.model_id
+        self._torch = torch
+        self.processor = AutoImageProcessor.from_pretrained(hf_id)
+        self.model = AutoModel.from_pretrained(hf_id)
+        self.model.eval()
+        for param in self.model.parameters():
+            param.requires_grad = False
+        self.model.to(self.device)
+
+    def encode_images(self, images: list[Image.Image]) -> np.ndarray:
+        """Extract frozen HuggingFace ViT features from a batch of PIL images."""
+        if not images:
+            return np.empty((0, 0), dtype=np.float32)
+
+        rgb_images = [img.convert("RGB") for img in images]
+        try:
+            inputs = self.processor(
+                images=rgb_images,
+                size={"height": self.image_size, "width": self.image_size},
+                return_tensors="pt",
+            )
+        except (TypeError, ValueError):
+            inputs = self.processor(images=rgb_images, return_tensors="pt")
+
+        pixel_values = inputs["pixel_values"].to(self.device)
+        with self._torch.inference_mode():
+            outputs = self.model(pixel_values=pixel_values)
+            if self.pooling == "patch_mean":
+                hidden = outputs.last_hidden_state
+                n_prefix = 1 + int(getattr(self.model.config, "num_register_tokens", 0))
+                pooled = hidden[:, n_prefix:, :].mean(dim=1)
+            elif getattr(outputs, "pooler_output", None) is not None:
+                pooled = outputs.pooler_output
+            else:
+                pooled = outputs.last_hidden_state[:, 0, :]
+
+        return pooled.detach().cpu().numpy().astype(np.float32, copy=False)
+
+
 class OpenCLIPExtractor(BaseFeatureExtractor):
     """Frozen OpenCLIP visual encoder supporting BioCLIP 2 models."""
 
@@ -256,13 +320,23 @@ def create_extractor(
     resolved_device = resolve_device(device)
 
     if spec.family == "timm":
-        return TimmViTExtractor(
-            spec,
-            pooling=pooling,
-            device=resolved_device,
-            image_size=image_size,
-            pretrained=pretrained,
-        )
+        try:
+            return TimmViTExtractor(
+                spec,
+                pooling=pooling,
+                device=resolved_device,
+                image_size=image_size,
+                pretrained=pretrained,
+            )
+        except Exception:
+            if pretrained and spec.hf_model_id:
+                return HuggingFaceViTExtractor(
+                    spec,
+                    pooling=pooling,
+                    device=resolved_device,
+                    image_size=image_size,
+                )
+            raise
     if spec.family == "open_clip":
         return OpenCLIPExtractor(
             spec,

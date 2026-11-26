@@ -55,9 +55,10 @@ def test_build_frgt_and_ozfish_and_fishwio_manifests(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    # Synthetic FishWIO fixture with fish folder and underscored habitat background folder.
+    # Synthetic FishWIO fixture with fish folder and underscored/hidden files.
     fw_root = raw_root / "fishwio" / "extracted" / "data_paper_dataset"
     _write_rgb_image(fw_root / "Caranx_melampygus" / "BA_19_J4_aabbccddeeff_10_32x24+0+0.jpeg")
+    (fw_root / "Caranx_melampygus" / "._appledouble.jpeg").write_bytes(b"AppleDouble")
     _write_rgb_image(fw_root / "_sand" / "ignore_bg.jpeg")
 
     df = build_manifest(raw_root, ["frgt", "ozfish", "fishwio"])

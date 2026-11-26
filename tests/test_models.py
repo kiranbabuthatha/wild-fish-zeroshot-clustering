@@ -62,6 +62,9 @@ def test_backbone_registry_and_validation() -> None:
     assert spec.family == "open_clip"
     assert spec.model_id == "hf-hub:imageomics/bioclip-2"
 
+    dinov3_spec = get_backbone_spec("dinov3_vitb16")
+    assert dinov3_spec.hf_model_id == "facebook/dinov3-vitb16-pretrain-lvd1689m"
+
     with pytest.raises(ValueError, match="Unsupported backbone"):
         get_backbone_spec("nonexistent_model")
 

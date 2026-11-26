@@ -182,8 +182,31 @@ def _build_explorer_html(experiment_name: str) -> str:
       --muted: #5a687a;
       --accent: #185adb;
       --accent-soft: #eaf1ff;
+      --badge-border: #c9dbff;
+      --input-bg: #ffffff;
+      --surface-alt: #f0f3f8;
+      --row-border: #eef2f7;
+      --hover-bg: #f0f4fa;
+      --active-bg: #f5f9ff;
       --noise-bg: #fff3f5;
       --noise-border: #f3c4cc;
+    }}
+    body.dark {{
+      --bg: #0d1117;
+      --card: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #9198a1;
+      --accent: #58a6ff;
+      --accent-soft: #17263c;
+      --badge-border: #2b4a70;
+      --input-bg: #0d1117;
+      --surface-alt: #21262d;
+      --row-border: #262c34;
+      --hover-bg: #21262d;
+      --active-bg: #17263c;
+      --noise-bg: #2c1820;
+      --noise-border: #6e3142;
     }}
     * {{ box-sizing: border-box; }}
     body {{
@@ -224,7 +247,12 @@ def _build_explorer_html(experiment_name: str) -> str:
       font-size: 0.82rem;
       padding: 4px 10px;
       border-radius: 999px;
-      border: 1px solid #c9dbff;
+      border: 1px solid var(--badge-border);
+    }}
+    .header-actions {{
+      display: flex;
+      gap: 10px;
+      align-items: center;
     }}
     .controls-card {{
       background: var(--card);
@@ -254,7 +282,7 @@ def _build_explorer_html(experiment_name: str) -> str:
       padding: 7px 10px;
       border: 1px solid var(--border);
       border-radius: 8px;
-      background: #fff;
+      background: var(--input-bg);
       color: var(--text);
       font-size: 0.9rem;
     }}
@@ -278,13 +306,13 @@ def _build_explorer_html(experiment_name: str) -> str:
       padding: 7px 12px;
       border-radius: 8px;
       border: 1px solid var(--border);
-      background: #fff;
+      background: var(--input-bg);
       color: var(--text);
       font-size: 0.85rem;
       font-weight: 600;
       cursor: pointer;
     }}
-    .btn:hover {{ background: #f0f4fa; }}
+    .btn:hover {{ background: var(--hover-bg); }}
     .btn-primary {{
       background: var(--accent);
       color: #fff;
@@ -332,7 +360,7 @@ def _build_explorer_html(experiment_name: str) -> str:
     }}
     .thumb-box {{
       flex: 1;
-      background: #f0f3f8;
+      background: var(--surface-alt);
       border: 1px solid var(--border);
       border-radius: 8px;
       min-height: 150px;
@@ -362,7 +390,7 @@ def _build_explorer_html(experiment_name: str) -> str:
     }}
     .meta-table td {{
       padding: 4px 0;
-      border-bottom: 1px solid #eef2f7;
+      border-bottom: 1px solid var(--row-border);
     }}
     .meta-table td:first-child {{
       color: var(--muted);
@@ -387,7 +415,7 @@ def _build_explorer_html(experiment_name: str) -> str:
       padding: 4px;
       text-align: center;
       cursor: pointer;
-      background: #fafbfd;
+      background: var(--surface-alt);
       font-size: 0.7rem;
     }}
     .nbr-item:hover {{ border-color: var(--accent); }}
@@ -455,7 +483,7 @@ def _build_explorer_html(experiment_name: str) -> str:
     }}
     .cluster-card.active-filter {{
       border: 2px solid var(--accent);
-      background: #f5f9ff;
+      background: var(--active-bg);
     }}
     .card-top {{
       display: flex;
@@ -540,7 +568,10 @@ def _build_explorer_html(experiment_name: str) -> str:
       <h1 id="exp-title">Wild Fish Embedding Explorer</h1>
       <div class="subtitle" id="exp-subtitle">Loading experiment metadata...</div>
     </div>
-    <span class="badge" id="exp-badge">Zero-Shot Atlas</span>
+    <div class="header-actions">
+      <button class="btn" id="theme-toggle-btn" type="button">Dark Mode</button>
+      <span class="badge" id="exp-badge">Zero-Shot Atlas</span>
+    </div>
   </div>
 
   <div class="controls-card">
@@ -637,8 +668,17 @@ def _build_explorer_html(experiment_name: str) -> str:
     highlightCluster: null,
     pinnedIdx: null,
     showCentroids: true,
-    showHulls: false
+    showHulls: false,
+    darkMode: localStorage.getItem("fish_atlas_theme") === "dark"
   }};
+
+  function applyTheme() {{
+    document.body.classList.toggle("dark", state.darkMode);
+    const btn = document.getElementById("theme-toggle-btn");
+    if (btn) {{
+      btn.textContent = state.darkMode ? "Light Mode" : "Dark Mode";
+    }}
+  }}
 
   function fmt(v, digits = 3) {{
     if (v === null || v === undefined || Number.isNaN(v)) return "n/a";
@@ -800,7 +840,7 @@ def _build_explorer_html(experiment_name: str) -> str:
             size: isNoise ? 5 : 7,
             color: color,
             opacity: idxs.map((i) => matchesFilter(i, labels) ? (isNoise ? 0.55 : 0.88) : 0.1),
-            line: {{ width: 0.4, color: "#1d2633" }}
+            line: {{ width: 0.4, color: state.darkMode ? "#0d1117" : "#1d2633" }}
           }}
         }});
       }});
@@ -812,7 +852,7 @@ def _build_explorer_html(experiment_name: str) -> str:
             mode: "lines",
             x: poly.map((p) => p[0]),
             y: poly.map((p) => p[1]),
-            line: {{ width: 1.3, dash: "dot", color: "#334155" }},
+            line: {{ width: 1.3, dash: "dot", color: state.darkMode ? "#94a3b8" : "#334155" }},
             hoverinfo: "skip",
             showlegend: false
           }});
@@ -831,19 +871,28 @@ def _build_explorer_html(experiment_name: str) -> str:
             text: cIds.map((id) => id),
             textposition: "top center",
             hoverinfo: "text",
-            marker: {{ symbol: "x", size: 10, color: "#0f172a", line: {{ width: 1.5, color: "#ffffff" }} }}
+            marker: {{
+              symbol: "x",
+              size: 10,
+              color: state.darkMode ? "#f8fafc" : "#0f172a",
+              line: {{ width: 1.5, color: state.darkMode ? "#0d1117" : "#ffffff" }}
+            }}
           }});
         }}
       }}
     }}
 
+    const isDark = state.darkMode;
     const layout = {{
       title: {{ text: `${{state.reduction.toUpperCase()}} - ${{state.clustering.toUpperCase()}} (${{state.colorBy}})`, x: 0.02 }},
-      template: "plotly_white",
+      template: isDark ? "plotly_dark" : "plotly_white",
+      paper_bgcolor: isDark ? "#161b22" : "#ffffff",
+      plot_bgcolor: isDark ? "#161b22" : "#ffffff",
+      font: {{ color: isDark ? "#e6edf3" : "#162130" }},
       margin: {{ t: 48, l: 50, r: 24, b: 96 }},
       hovermode: "closest",
-      xaxis: {{ title: `${{state.reduction.toUpperCase()}} 1`, zeroline: false }},
-      yaxis: {{ title: `${{state.reduction.toUpperCase()}} 2`, zeroline: false }},
+      xaxis: {{ title: `${{state.reduction.toUpperCase()}} 1`, zeroline: false, gridcolor: isDark ? "#262c34" : "#e5eaf0" }},
+      yaxis: {{ title: `${{state.reduction.toUpperCase()}} 2`, zeroline: false, gridcolor: isDark ? "#262c34" : "#e5eaf0" }},
       legend: {{ orientation: "h", y: -0.18, x: 0, font: {{ size: 11 }} }}
     }};
 
@@ -1063,6 +1112,12 @@ def _build_explorer_html(experiment_name: str) -> str:
       renderPlot();
       renderClusterCards();
     }});
+    document.getElementById("theme-toggle-btn").addEventListener("click", () => {{
+      state.darkMode = !state.darkMode;
+      localStorage.setItem("fish_atlas_theme", state.darkMode ? "dark" : "light");
+      applyTheme();
+      renderPlot();
+    }});
     document.getElementById("modal-close-btn").addEventListener("click", () => {{
       document.getElementById("cluster-modal").classList.remove("open");
     }});
@@ -1087,6 +1142,7 @@ def _build_explorer_html(experiment_name: str) -> str:
       const resp = await fetch("explorer_data.json");
       DATA = await resp.json();
     }}
+    applyTheme();
     populateSelectors();
     bindEvents();
     renderAll();

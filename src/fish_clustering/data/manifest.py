@@ -166,7 +166,7 @@ def _index_files(root: Path, extensions: set[str] | None = None) -> dict[str, Pa
     if not root.is_dir():
         return indexed
     for path in sorted(root.rglob("*")):
-        if not path.is_file():
+        if not path.is_file() or path.name.startswith("."):
             continue
         if extensions is not None and path.suffix.lower() not in extensions:
             continue
@@ -193,12 +193,16 @@ def build_frgt_manifest(raw_root: Path) -> pd.DataFrame:
 
     fish_index: dict[str, Path] = {}
     for path in sorted(fish_dir.rglob("*.png")):
+        if path.name.startswith("."):
+            continue
         fish_index[path.stem] = path
         fish_index[_normalize_frgt_key(path.stem)] = path
 
     mask_index: dict[str, Path] = {}
     if mask_dir.is_dir():
         for path in sorted(mask_dir.rglob("*.png")):
+            if path.name.startswith("."):
+                continue
             mask_index[path.stem] = path
             mask_index[_normalize_frgt_key(path.stem)] = path
 
@@ -248,7 +252,11 @@ def build_ozfish_manifest(raw_root: Path) -> pd.DataFrame:
     if not crops_dir.is_dir():
         raise FileNotFoundError(f"OzFish crops directory not found: {crops_dir}")
 
-    crop_files = {p.name: p for p in crops_dir.iterdir() if p.is_file()}
+    crop_files = {
+        p.name: p
+        for p in crops_dir.iterdir()
+        if p.is_file() and not p.name.startswith(".")
+    }
     meta = pd.read_csv(csv_path, dtype=str).fillna("")
 
     rows: list[dict[str, object]] = []
@@ -315,11 +323,15 @@ def build_fishwio_manifest(raw_root: Path) -> pd.DataFrame:
 
     rows: list[dict[str, object]] = []
     for class_dir in sorted(data_dir.iterdir()):
-        if not class_dir.is_dir() or class_dir.name.startswith("_"):
+        if not class_dir.is_dir() or class_dir.name.startswith(("_", ".")):
             continue
         label_raw, genus, species, is_sp = _parse_fishwio_folder(class_dir.name)
         for img_path in sorted(class_dir.iterdir()):
-            if not img_path.is_file() or img_path.suffix.lower() not in _IMAGE_EXTENSIONS:
+            if (
+                not img_path.is_file()
+                or img_path.name.startswith(".")
+                or img_path.suffix.lower() not in _IMAGE_EXTENSIONS
+            ):
                 continue
             rows.append(
                 _make_row(
@@ -368,9 +380,11 @@ def build_mediterranean_manifest(raw_root: Path) -> pd.DataFrame:
         img_by_stem = {
             p.stem: p
             for p in sorted(img_dir.iterdir())
-            if p.is_file() and p.suffix.lower() in _IMAGE_EXTENSIONS
+            if p.is_file() and not p.name.startswith(".") and p.suffix.lower() in _IMAGE_EXTENSIONS
         }
         for lbl_path in sorted(lbl_dir.glob("*.txt")):
+            if lbl_path.name.startswith("."):
+                continue
             img_path = img_by_stem.get(lbl_path.stem)
             if img_path is None:
                 continue
@@ -538,7 +552,12 @@ def _build_class_folder_dataset(
 
     rows: list[dict[str, object]] = []
     for img_path in sorted(data_dir.rglob("*")):
-        if not img_path.is_file() or img_path.suffix.lower() not in _IMAGE_EXTENSIONS:
+        if (
+            not img_path.is_file()
+            or img_path.name.startswith(".")
+            or img_path.parent.name.startswith(".")
+            or img_path.suffix.lower() not in _IMAGE_EXTENSIONS
+        ):
             continue
         label_folder = img_path.parent.name
         genus, species, is_sp = _parse_binomial(label_folder)
